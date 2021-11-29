@@ -1,0 +1,15 @@
+.lH {
+  &::after {
+    content: "";
+    height: 40px;
+    display: block;
+    background-color: black;
+  }
+}
+
+
+@screen pt {
+  .lH {
+    height: var(--header-height); 
+  }
+}

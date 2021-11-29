@@ -1,28 +1,25 @@
 <template>
   <div id="app">
-    <img alt="Vue logo" src="./assets/logo.png">
-    <HelloWorld msg="Welcome to Your Vue.js App"/>
+    <Header />
+    <Index />
+    <span class="material-icons-outlined">shopping_cart</span>
+    <span class="material-icons-outlined">format_list_bulleted</span>
+    <span class="material-icons-outlined">done</span>
+    <span class="material-icons-outlined">email</span>
   </div>
 </template>
 
 <script>
-import HelloWorld from './components/HelloWorld.vue'
+import Header from './components/Header.vue';
+import Index from './view/index.vue';
 
 export default {
   name: 'App',
   components: {
-    HelloWorld
+    Header: Header,
+    Index: Index,
   }
 }
 </script>
 
-<style>
-#app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-  margin-top: 60px;
-}
-</style>
+<style></style>
