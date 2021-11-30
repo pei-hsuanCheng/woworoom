@@ -9,7 +9,7 @@
 
 
 @screen pt {
-  .lH {
+  .lHNav {
     height: var(--header-height); 
   }
 }
