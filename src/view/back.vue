@@ -1,9 +1,17 @@
 <template>
   <div class="max-w-1100 mx-auto py-60">
-    <h3 class="text-28 mb-96 text-center">全產品類別營收比重</h3>
-    <div id="chart"></div>
+    <div class="flex justify-around">
+      <div>
+        <h3 class="text-28 mb-96 text-center">全產品類別營收比重</h3>
+        <div id="chart"></div>
+      </div>
+      <div>
+        <h3 class="text-28 mb-96 text-center">全品項營收比重</h3>
+        <div id="chart2"></div>
+      </div>
+    </div>
     <div class="flex justify-end mb-12">
-      <button type="button" class="rounded-sm py-10 px-20 border border-black border-solid hover:text-gray-500 hover:border-gray-500 duration-300">清除全部訂單</button>
+      <button type="button" class="rounded-sm py-10 px-20 border border-black border-solid hover:text-gray-500 hover:border-gray-500 duration-300" @click="deleteAllOrders">清除全部訂單</button>
     </div>
     <table class="orderList w-full">
       <thead>
@@ -19,18 +27,27 @@
         </tr>
       </thead>
       <tbody>
-        <tr>
-          <td>10088377474</td>
+        <tr v-if="!orders">
+          <td colspan="8" class="text-center">尚無訂單</td>
+        </tr>
+        <tr v-else v-for="item in orders" :key="item.id">
+          <td>{{item.id}}</td>
           <td>
-            <span>小杰</span><br>
-            <span>0912345678</span>
+            <span>{{item.user.name}}</span><br>
+            <span>{{item.user.tel}}</span>
           </td>
-          <td>高雄市前鎮區六合路183巷66號</td>
-          <td>cccexample@gmail.com</td>
-          <td>Louvre 雙人床架</td>
-          <td>2021/03/08</td>
-          <td><button type="button" class="underline text-x63ff">未處理</button></td>
-          <td><button type="button" class="bg-xc224 text-xf px-12 py-4">刪除</button></td>
+          <td>{{item.user.address}}</td>
+          <td>{{item.user.email}}</td>
+          <td>
+            <ul>
+              <li v-for="product in item.products" :key="product.id" class="mb-4">
+                {{product.title}}
+              </li>
+            </ul>
+          </td>
+          <td>{{item.createdAt}}</td>
+          <td><button type="button" class="underline text-x63ff" @click="changeStatus(item.id)" :disabled="item.paid">{{item.paid ? '已處理' : '未處理'}}</button></td>
+          <td><button type="button" class="bg-xc224 text-xf px-12 py-4" @click="deleteOrder(item.id)">刪除</button></td>
         </tr>
       </tbody>
     </table>
@@ -38,26 +55,125 @@
 </template>
 
 <script>
+import axios from 'axios';
 import c3 from "c3";
+import { palette, header } from '../util';
 
 export default {
+  data() {
+    return {
+      orders: null,
+    }
+  },
   mounted() {
-    c3.generate({
-      data: {
-        columns: [
-          ["data1", 30],
-          ["data2", 120],
-          ["data3", 50],
-        ],
-        type: "pie",
-        colors: {
-          data1: '#DACBFF',
-          data2: '#5434A7',
-          data3: '#9D7FEA'
-        },
-      },
+    axios.get('https://livejs-api.hexschool.io/api/livejs/v1/admin/passion/orders', header).then((res) => {
+      const {data} = res;
+      this.orders = data.orders.length>0?data.orders:null;
+      this.renderChart(this.orders);
+      this.renderChart2(this.orders);
     });
   },
+  methods: {
+    renderChart(data) {
+      const categories = {};
+      if (!data) return;
+
+      data.forEach(item => {
+        item.products.forEach(product => {
+          if(categories[product.category]){
+            categories[product.category]+=1;
+          } else {
+            categories[product.category] = 1;
+          }
+        });
+      });
+
+      const columns = [];
+      const colors = {};
+      Object.keys(categories).forEach((key, index) => {
+        columns.push([key,categories[key]]);
+        colors[key] = palette[index];
+      });
+
+      c3.generate({
+        bindto: '#chart',
+        data: {
+          columns,
+          type: "pie",
+          colors,
+        },
+      });
+    },
+    renderChart2(data) {
+      if (!data) return;
+      
+      const saleList = {};
+      data.forEach(item => {
+        item.products.forEach(product => {
+          if(saleList[product.title]){
+            saleList[product.title]+=1;
+          } else {
+            saleList[product.title] = 1;
+          }
+        });
+      });
+
+      const colors = {};
+      const productList = Object.keys(saleList).map((key) => [key, saleList[key]]);
+      productList.forEach((item, index) => {
+        const next = index + 1;
+        if(productList.length > next && item[1] > productList[next][1]){
+          productList[index] = productList.splice(next, 1, item)[0];
+        }
+      });
+
+      const columns = productList.reverse().splice(0,3);
+      let otherQuantity = 0;
+      productList.forEach(item => otherQuantity += item[1]);
+      columns.push(['其他', otherQuantity]);
+
+      columns.forEach((item, index) => {
+        colors[item[0]] = palette[index];
+      });
+
+      c3.generate({
+        bindto: '#chart2',
+        data: {
+          columns,
+          type: "pie",
+          colors,
+        },
+      });
+    },
+    changeStatus(id) {
+      const body = {
+        data: {
+          id,
+          paid: true,
+        }
+      };
+
+      axios.put(`https://livejs-api.hexschool.io/api/livejs/v1/admin/passion/orders`, body, header).then((res) => {
+        const {data} = res;
+        this.orders = data.orders;
+      });
+    },
+    deleteOrder(id) {
+      axios.delete(`https://livejs-api.hexschool.io/api/livejs/v1/admin/passion/orders/${id}`, header).then((res) => {
+        const {data} = res;
+        this.orders = data.orders.length>0 ? data.orders : null;
+        this.renderChart(this.orders);
+        this.renderChart2(this.orders);
+      });
+    },
+    deleteAllOrders() {
+      axios.delete(`https://livejs-api.hexschool.io/api/livejs/v1/admin/passion/orders`, header).then(() => {
+        this.orders = null;
+        this.renderChart(null);
+        this.renderChart2(null);
+      });
+    }
+  }
 };
 </script>
 

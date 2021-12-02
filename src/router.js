@@ -2,6 +2,7 @@ import Vue from 'vue';
 import VueRouter from 'vue-router';
 import index from './view';
 import back from './view/back';
+import notFount from './view/404';
 
 Vue.use(VueRouter)
 
@@ -18,7 +19,7 @@ const routes = [
   },
   {
     path: '*',
-    component: index
+    component: notFount
   }
 ]
 

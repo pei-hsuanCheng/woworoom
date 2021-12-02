@@ -295,20 +295,21 @@
       </ul>
     </section>
     <section class="max-w-1100 mx-auto p-32" id="productList">
-      <select class="w-1/4 py-8 px-12 mb-32 rounded-sm border border-gray-300 border-solid">
+      <select class="w-1/4 py-8 px-12 mb-32 rounded-sm border border-gray-300 border-solid" @change="filterProducts($event)">
         <option value="all" selected>全部</option>
         <option value="床架">床架</option>
         <option value="收納">收納</option>
         <option value="窗簾">窗簾</option>
       </select>
-      <ul class="flex flex-wrap -mx-14">
-        <li class="productItem w-1/4 box-border">
+      <div v-if="!filteredProducts" class="text-2xl">Loading...</div>
+      <ul v-else class="flex flex-wrap -mx-14">
+        <li v-for="item in filteredProducts" :key="item.id" class="productItem w-1/4 box-border">
           <div class="productCard m-14 relative">
-            <img :src="productImg1" class="w-full" alt="Antony 雙人床架／雙人加大" />
-            <button type="button" class="w-full bg-x0 text-center p-10 mb-8 text-xf">加入購物車</button>
-            <p class="text-20 mb-8">Antony 雙人床架／雙人加大</p>
-            <p class="text-20 line-through">NT$18,000</p>
-            <p class="text-28">NT$12,000</p>
+            <img :src="item.images" class="w-full" :alt="item.title" />
+            <button type="button" class="w-full bg-x0 text-center p-10 mb-8 text-xf hover:bg-x79 hover:text-xf duration-300" @click="addToCart(item.id)">加入購物車</button>
+            <p class="text-20 mb-8">{{item.title}}</p>
+            <p class="text-20 line-through">{{`NT$${addSeperator(item.origin_price)}`}}</p>
+            <p class="text-28">{{`NT$${addSeperator(item.price)}`}}</p>
           </div>
         </li>
       </ul>
@@ -325,78 +326,85 @@
               <th class="text-left" colspan="2">金額</th>
             </tr>
           </thead>
-          <tbody>
-            <tr>
+          <tbody v-if="carts">
+            <tr v-for="item in carts.carts" :key="item.id">
               <td>
                 <div class="flex">
-                  <img class="w-80 h-80" :src="productImg1" alt="Antony 雙人床架／雙人加大" />
-                  <p class="ml-14">Antony 雙人床架／雙人加大</p>
+                  <img class="w-80 h-80 flex-shrink-0" :src="item.product.images" :alt="item.product.title" />
+                  <p class="ml-14 flex-grow">{{item.product.title}}</p>
                 </div>
               </td>
-              <td>NT$12,000</td>
-              <td>1</td>
-              <td>NT$12,000</td>
+              <td>{{`NT$${addSeperator(item.product.price)}`}}</td>
+              <td>{{item.quantity}}</td>
+              <td>{{`NT$${addSeperator(item.product.price * item.quantity)}`}}</td>
               <td>
-                <button>
+                <button @click="removeProduct(item.id)">
                   <span class="text-28 material-icons hover:text-gray-500 duration-300">close</span>
                 </button>
               </td>
             </tr>
           </tbody>
+          <tbody v-else>
+            <tr>
+              <td colspan="5" class="text-center">購物車還是空的喔(*´▽`*)</td>
+            </tr>
+          </tbody>
         </table>
         <div class="flex justify-between items-center">
-          <button type="button" class="border border-solid border-black rounded-sm px-20 py-10 hover:text-gray-500 hover:border-gray-500 duration-300">刪除所有品項</button>
+          <button type="button" class="border border-solid border-black rounded-sm px-20 py-10 hover:text-gray-500 hover:border-gray-500 duration-300" @click="removeCart()">刪除所有品項</button>
           <div>
             <span class="text-20 mr-56">總金額</span>
-            <span class="text-28">NT$13,980</span>
+            <span class="text-28">{{`NT$${carts?addSeperator(carts.finalTotal):0}`}}</span>
           </div>
         </div>
       </div>
     </section>
     <section class="p-60">
       <h3 class="text-28 mb-32 text-center">填寫預訂資料</h3>
-      <form class="max-w-sm mx-auto">
+      <p v-if="posting" class="text-center text-2xl text-x70">訂單送出中...</p>
+      <form  v-else class="max-w-sm mx-auto" @submit="sendOrder">
         <div class="formGroup mb-20">
           <label for="name" class="mb-6">姓名</label>
           <div class="relative">
-            <input class="w-full py-8 px-12 rounded-sm border border-solid border-gray-300" type="text" id="name" name="name" placeholder="請輸入姓名">
-            <span class="text-xc224 pl-8 absolute right-0 top-1/2 transform translate-x-full -translate-y-1/2">必填!</span>
+            <input class="w-full py-8 px-12 rounded-sm border border-solid border-gray-300" type="text" id="name" name="name" v-model="form.name" placeholder="請輸入姓名">
+            <span v-if="error.name" class="text-xc224 pl-8 absolute right-0 top-1/2 transform translate-x-full -translate-y-1/2">{{error.name}}</span>
           </div>
         </div>
         <div class="formGroup mb-20">
-          <label for="phone" class="mb-6">電話</label><br>
+          <label for="tel" class="mb-6">電話</label><br>
           <div class="relative">
-            <input class="w-full py-8 px-12 rounded-sm border border-solid border-gray-300" type="text" id="phone" name="phone" placeholder="請輸入電話">
-            <span class="text-xc224 pl-8 absolute right-0 top-1/2 transform translate-x-full -translate-y-1/2">必填!</span>
+            <input class="w-full py-8 px-12 rounded-sm border border-solid border-gray-300" type="tel" id="tel" name="tel" v-model="form.tel" placeholder="請輸入電話">
+            <span v-if="error.tel" class="text-xc224 pl-8 absolute right-0 top-1/2 transform translate-x-full -translate-y-1/2">{{error.tel}}</span>
           </div>
         </div>
         <div class="formGroup mb-20">
           <label for="email" class="mb-6">Email</label><br>
           <div class="relative">
-            <input class="w-full py-8 px-12 rounded-sm border border-solid border-gray-300" type="text" id="email" name="email" placeholder="請輸入 Email">
-            <span class="text-xc224 pl-8 absolute right-0 top-1/2 transform translate-x-full -translate-y-1/2">必填!</span>
+            <input class="w-full py-8 px-12 rounded-sm border border-solid border-gray-300" type="email" id="email" name="email" v-model="form.email" placeholder="請輸入 Email">
+            <span v-if="error.email" class="text-xc224 pl-8 absolute right-0 top-1/2 transform translate-x-full -translate-y-1/2">{{error.email}}</span>
           </div>
         </div>
         <div class="formGroup mb-20">
-          <label for="addr" class="mb-6">寄送地址</label><br>
+          <label for="address" class="mb-6">寄送地址</label><br>
           <div class="relative">
-            <input class="w-full py-8 px-12 rounded-sm border border-solid border-gray-300" type="text" id="addr" name="addr" placeholder="請輸入寄送地址">
-            <span class="text-xc224 pl-8 absolute right-0 top-1/2 transform translate-x-full -translate-y-1/2">必填!</span>
+            <input class="w-full py-8 px-12 rounded-sm border border-solid border-gray-300" type="text" id="address" name="address" v-model="form.address" placeholder="請輸入寄送地址">
+            <span v-if="error.address" class="text-xc224 pl-8 absolute right-0 top-1/2 transform translate-x-full -translate-y-1/2">{{error.address}}</span>
           </div>
         </div>
         <div class="formGroup mb-48">
-          <label for="transactionType" class="mb-6">交易方式</label><br>
+          <label for="payment" class="mb-6">交易方式</label><br>
           <div class="relative">
-            <select class="w-full py-8 px-12 rounded-sm border border-gray-300 border-solid" name="transactionType" id="transactionType">
+            <select class="w-full py-8 px-12 rounded-sm border border-gray-300 border-solid" name="payment" v-model="form.payment" id="payment">
               <option value="ATM">ATM</option>
               <option value="信用卡">信用卡</option>
               <option value="超商付款">超商付款</option>
             </select>
-            <span class="text-xc224 pl-8 absolute right-0 top-1/2 transform translate-x-full -translate-y-1/2">必填!</span>
+            <span v-if="error.payment" class="text-xc224 pl-8 absolute right-0 top-1/2 transform translate-x-full -translate-y-1/2">{{error.payment}}</span>
           </div>
         </div>
         <div class="formGroup text-center">
-          <input class="py-10 w-3/4 bg-x0 text-xf rounded" type="submit" value="送出預訂資料">
+          <p v-if="error.cart" class="text-xc224 mb-4">{{error.cart}}</p>
+          <input class="py-10 w-3/4 bg-x0 text-xf rounded cursor-pointer hover:bg-x79 hover:text-xf duration-300" type="submit" value="送出預訂資料" />
         </div>
       </form>
     </section>
@@ -404,6 +412,8 @@
 </template>
 
 <script>
+import axios from 'axios';
+
 export default {
   data() {
     return {
@@ -429,6 +439,174 @@ export default {
       productImg6: require('../assets/img/product_6.png'),
       productImg7: require('../assets/img/product_7.png'),
       productImg8: require('../assets/img/product_8.png'),
+      products: null,
+      filteredProducts: null,
+      carts: null,
+      posting: false,
+      fetching: null,
+      form: {
+        name: '',
+        tel: '',
+        email: '',
+        address: '',
+        payment: '',
+      },
+      error: {
+        name: '',
+        tel: '',
+        email: '',
+        address: '',
+        payment: '',
+        cart: ''
+      },
+    }
+  },
+  mounted() {
+    axios.get('https://livejs-api.hexschool.io/api/livejs/v1/customer/passion/products').then((res) => {
+      const {data} = res;
+      this.products = data.products;
+      this.filteredProducts = data.products;
+    });
+    axios.get('https://livejs-api.hexschool.io/api/livejs/v1/customer/passion/carts').then((res) => {
+      const {data} = res;
+      if (data.carts.length>0) {
+        this.carts = data;
+      }
+    });
+  },
+  methods: {
+    addSeperator(value) {
+      return value.toString().replace(/\B(?<!\.\d*)(?=(\d{3})+(?!\d))/g, ",")
+    },
+    filterProducts(e) {
+      const targetCategory = e.target.value;
+      if(targetCategory === 'all') {
+        this.filteredProducts = this.products;
+      }
+      this.filteredProducts = this.products.filter(item => item.category === targetCategory);
+    },
+    addToCart(productId){
+      const org = this.carts?.carts.find(item => item.product.id === productId);
+      const newQuantity = org ? ++org.quantity : 1;
+      const body = {
+        data: {
+          id: org?.id,
+          productId,
+          quantity: newQuantity,
+        }
+      }
+
+      const action = {
+        method: org ? 'patch' : 'post',
+        url: 'https://livejs-api.hexschool.io/api/livejs/v1/customer/passion/carts',
+        data: body
+      }
+
+      axios(action).then((res) => {
+        const {data} = res;
+        this.carts = data;
+      });
+    },
+    removeCart() {
+      axios.delete('https://livejs-api.hexschool.io/api/livejs/v1/customer/passion/carts').then(() => {
+        this.carts = null;
+      });
+    },
+    removeProduct(id) {
+      axios.delete(`https://livejs-api.hexschool.io/api/livejs/v1/customer/passion/carts/${id}`).then((res) => {
+        const {data} = res;
+        if (data.carts.length>0) {
+          this.carts = data;
+        } else {
+          this.carts = null;
+        }
+      });
+    },
+    checkForm() {
+      const {name, tel, email, address, payment} = this.form;
+      let pass = true;
+      const newError = {
+        name: '',
+        tel: '',
+        email: '',
+        address: '',
+        payment: '',
+        cart: '',
+      };
+
+      if(!this.carts) {
+        newError.cart = '購物車內沒有品項';
+        pass = false;
+      }
+
+      if(!name){
+        newError.name = '姓名為必填!';
+        pass = false;
+      }
+      if(!tel){
+        newError.tel = '電話為必填!';
+        pass = false;
+      }
+      if(!/^[0-9]{10}$/.test(tel)){
+        newError.tel = '電話格式錯誤!';
+        pass = false;
+      }
+      if(!email){
+        newError.email = 'Email為必填!';
+        pass = false;
+      }
+      if(!/\S+@\S+\.\S+/.test(email)){
+        newError.email = 'Email格式錯誤!';
+        pass = false;
+      }
+      if(!address){
+        newError.address = '寄送地址為必填!';
+        pass = false;
+      }
+      if(address.length<10){
+        newError.address = '寄送地址格式錯誤!';
+        pass = false;
+      }
+      if(!payment){
+        newError.payment = '交易方式為必填!';
+        pass = false;
+      }
+
+      this.error = newError;
+      return pass;
+    },
+    sendOrder(e) {
+      e.preventDefault();
+      this.posting = true;
+      const pass = this.checkForm();
+      if (!pass) {
+        this.posting = false;
+        return
+      }
+
+      const body = {
+        data: {
+          user: this.form
+        }
+      }
+
+      axios.post('https://livejs-api.hexschool.io/api/livejs/v1/customer/passion/orders', body).then(() => {
+        this.initPage();
+        this.posting = false;
+        console.log(this.posting);
+      });
+    },
+    initPage() {
+      const vm = this;
+      vm.products = null;
+      vm.carts = null;
+      vm.form = {
+        name: '',
+        tel: '',
+        email: '',
+        address: '',
+        payment: '',
+      };
     }
   }
 }
