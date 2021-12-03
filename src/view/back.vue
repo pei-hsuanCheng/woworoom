@@ -22,8 +22,8 @@
           <th>電子郵件</th>
           <th>訂單品項</th>
           <th>訂單日期</th>
-          <th>訂單狀態</th>
-          <th>操作</th>
+          <th class="w-1/12">訂單狀態</th>
+          <th class="w-1/12">操作</th>
         </tr>
       </thead>
       <tbody>
@@ -45,7 +45,7 @@
               </li>
             </ul>
           </td>
-          <td>{{item.createdAt}}</td>
+          <td>{{renderDate(item.createdAt * 1000)}}</td>
           <td><button type="button" class="underline text-x63ff" @click="changeStatus(item.id)" :disabled="item.paid">{{item.paid ? '已處理' : '未處理'}}</button></td>
           <td><button type="button" class="bg-xc224 text-xf px-12 py-4" @click="deleteOrder(item.id)">刪除</button></td>
         </tr>
@@ -57,6 +57,7 @@
 <script>
 import axios from 'axios';
 import c3 from "c3";
+import dayjs from 'dayjs';
 import { palette, header } from '../util';
 
 export default {
@@ -172,6 +173,9 @@ export default {
         this.renderChart(null);
         this.renderChart2(null);
       });
+    },
+    renderDate(time) {
+      return dayjs(time).format('YYYY/MM/DD')
     }
   }
 };
