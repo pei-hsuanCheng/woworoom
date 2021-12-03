@@ -301,7 +301,9 @@
         <option value="收納">收納</option>
         <option value="窗簾">窗簾</option>
       </select>
-      <div v-if="!filteredProducts" class="text-2xl">Loading...</div>
+      <div v-if="!filteredProducts" class="mLoading">
+        <img :src="loadingImg" alt="loading" class="mLoadingImg" />
+      </div>
       <ul v-else class="flex flex-wrap -mx-14">
         <li v-for="item in filteredProducts" :key="item.id" class="productItem w-1/4 box-border">
           <div class="productCard m-14 relative">
@@ -316,7 +318,10 @@
     </section>
     <section class="bg-xf8 p-48">
       <h3 class="text-28 mb-32 text-center">我的購物車</h3>
-      <div class="max-w-1100 mx-auto">
+      <div v-if="fetching" class="mLoading">
+        <img :src="loadingImg" alt="loading" class="mLoadingImg" />
+      </div>
+      <div v-else class="max-w-1100 mx-auto">
         <table class="shoppingCart text-20 w-full mb-20">
           <thead>
             <tr>
@@ -361,7 +366,9 @@
     </section>
     <section class="p-60">
       <h3 class="text-28 mb-32 text-center">填寫預訂資料</h3>
-      <p v-if="posting" class="text-center text-2xl text-x70">訂單送出中...</p>
+      <div v-if="posting" class="mLoading">
+        <img :src="loadingImg" alt="loading" class="mLoadingImg" />
+      </div>
       <form  v-else class="max-w-sm mx-auto" @submit="sendOrder">
         <div class="formGroup mb-20">
           <label for="name" class="mb-6">姓名</label>
@@ -408,13 +415,22 @@
         </div>
       </form>
     </section>
+    <Modal :openModal="openModal">
+      <template #Modal_children>
+        <p class="modalHdText text-20 font-extrabold">{{msg}}</p>
+      </template>
+    </Modal>
   </div>
 </template>
 
 <script>
 import axios from 'axios';
+import Modal from '../components/Modal';
 
 export default {
+  components: {
+    Modal: Modal,
+  },
   data() {
     return {
       kvImg: require('../assets/img/kv_img.png'),
@@ -439,6 +455,7 @@ export default {
       productImg6: require('../assets/img/product_6.png'),
       productImg7: require('../assets/img/product_7.png'),
       productImg8: require('../assets/img/product_8.png'),
+      loadingImg: require('../assets/img/loading.png'),
       products: null,
       filteredProducts: null,
       carts: null,
@@ -459,6 +476,8 @@ export default {
         payment: '',
         cart: ''
       },
+      msg: null,
+      openModal: false,
     }
   },
   mounted() {
@@ -486,6 +505,7 @@ export default {
       this.filteredProducts = this.products.filter(item => item.category === targetCategory);
     },
     addToCart(productId){
+      this.fetching = true;
       const org = this.carts?.carts.find(item => item.product.id === productId);
       const newQuantity = org ? ++org.quantity : 1;
       const body = {
@@ -503,16 +523,40 @@ export default {
       }
 
       axios(action).then((res) => {
+        this.fetching = false;
         const {data} = res;
         this.carts = data;
+
+        this.msg = '已加入購物車';
+        this.openModal = true;
+
+        const timeout = setTimeout(()=> {
+          this.openModal = false;
+          this.msg = null;
+          clearTimeout(timeout);
+        }, 1500);
+      }).catch(()=> {
+        this.fetching = false;
       });
     },
     removeCart() {
+      this.fetching = true;
       axios.delete('https://livejs-api.hexschool.io/api/livejs/v1/customer/passion/carts').then(() => {
         this.carts = null;
+        this.fetching = false;
+
+        this.msg = '已清空購物車';
+        this.openModal = true;
+
+        const timeout = setTimeout(()=> {
+          this.openModal = false;
+          this.msg = null;
+          clearTimeout(timeout);
+        }, 1500);
       });
     },
     removeProduct(id) {
+      this.fetching = true;
       axios.delete(`https://livejs-api.hexschool.io/api/livejs/v1/customer/passion/carts/${id}`).then((res) => {
         const {data} = res;
         if (data.carts.length>0) {
@@ -520,6 +564,15 @@ export default {
         } else {
           this.carts = null;
         }
+        this.fetching = false;
+        this.msg = '移除成功!';
+        this.openModal = true;
+
+        const timeout = setTimeout(()=> {
+          this.openModal = false;
+          this.msg = null;
+          clearTimeout(timeout);
+        }, 1500);
       });
     },
     checkForm() {
@@ -591,9 +644,17 @@ export default {
       }
 
       axios.post('https://livejs-api.hexschool.io/api/livejs/v1/customer/passion/orders', body).then(() => {
-        this.initPage();
-        this.posting = false;
-        console.log(this.posting);
+        this.msg = '已送出訂單!';
+        this.openModal = true;
+
+        const timeout = setTimeout(()=> {
+          this.openModal = false;
+          this.msg = null;
+          this.initPage();
+          this.posting = false;
+          clearTimeout(timeout);
+        }, 1500);
+        
       });
     },
     initPage() {
@@ -692,5 +753,4 @@ export default {
     padding: 20px 20px 20px 0;
   }
 }
-
 </style>

@@ -1,0 +1,18 @@
+.modalHdText {
+  background-image: linear-gradient(to left, #ff814f, #25f363 25%, #235af1 50%, #25f363 75%, #ff814f);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  background-size: 200% 100%;
+  animation: masked 2s infinite linear;
+}
+
+@keyframes masked {
+  0% {
+    background-position: 0 0;
+  }
+  
+  100% {
+    background-position: 200% 0;
+  }
+}
